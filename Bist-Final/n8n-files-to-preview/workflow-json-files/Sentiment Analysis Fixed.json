@@ -1,0 +1,1122 @@
+{
+  "name": "Sentiment Analysis Fixed",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "runCustomScript",
+        "scriptCode": "=const page = $page;\n\nawait page.goto('https://tr.tradingview.com/symbols/BIST-{{ $json.stockSymbol }}/news/', {\n  waitUntil: 'networkidle2',\n  timeout: 30000\n});\n\nawait page.waitForSelector('a[href*=\"/news/\"]', { timeout: 10000 });\n\nconst links = await page.evaluate(function() {\n  return Array.from(document.querySelectorAll('a[href*=\"/news/\"]'))\n    .map(function(a) { return a.href; })\n    .filter(function(href) { \n      return href.includes('/news/') && !href.endsWith('/news/'); \n    })\n    .slice(0, 50);\n});\n\nreturn links.map(function(link) {\n  return { json: { url: link } };\n});\n {{ $json.cleanSymbol }}",
+        "options": {
+          "headless": true
+        }
+      },
+      "type": "CUSTOM.puppeteer",
+      "typeVersion": 1,
+      "position": [
+        976,
+        96
+      ],
+      "id": "6ff867aa-447b-4287-a0c7-8da835daf9c2",
+      "name": "Url scraper"
+    },
+    {
+      "parameters": {
+        "operation": "runCustomScript",
+        "scriptCode": "const page = $page;\nconst newsUrl = $json.url;\nawait page.goto(newsUrl, {\n  waitUntil: 'networkidle2',\n  timeout: 30000\n});\nawait new Promise(function(resolve) { setTimeout(resolve, 3000); });\n\nconst content = await page.evaluate(function() {\n  // Başlık\n  const titleEl = document.querySelector('h1[class*=\"title\"]');\n  const title = titleEl ? titleEl.textContent.trim() : '';\n  \n  // İçerik - body-KX2tCBZq class'ı içindeki tüm text\n  const bodyEl = document.querySelector('.body-KX2tCBZq');\n  let body = '';\n  if (bodyEl) {\n    const allText = bodyEl.innerText || bodyEl.textContent;\n    body = allText.trim();\n  }\n  \n  // Orjinal link (KAP linki varsa)\n  const kapLinkEl = document.querySelector('a[href*=\"kap.org.tr\"]');\n  const kapLink = kapLinkEl ? kapLinkEl.getAttribute('href') : '';\n  \n  // Tarih - time etiketi ve datetime attribute\n  let date = '';\n  const timeEl = document.querySelector('time[datetime]');\n  if (timeEl) {\n    const datetime = timeEl.getAttribute('datetime');\n    // ISO formatını \"YYYY-MM-DD HH:MM:SS\" formatına çevir\n    if (datetime) {\n      // T ve Z'yi kaldır, milisaniyeleri at\n      date = datetime.replace('T', ' ').replace('.000Z', '').replace('Z', '');\n    }\n  }\n  \n  // Eğer datetime bulunamazsa, başka time etiketlerini dene\n  if (!date) {\n    const allTimeEls = document.querySelectorAll('time');\n    for (let i = 0; i < allTimeEls.length; i++) {\n      const dt = allTimeEls[i].getAttribute('datetime');\n      if (dt) {\n        date = dt.replace('T', ' ').replace('.000Z', '').replace('Z', '');\n        break;\n      }\n    }\n  }\n  \n  // Kaynak (provider tag)\n  const sourceEl = document.querySelector('.tag-text-rVj4hiuX');\n  const source = sourceEl ? sourceEl.textContent.trim() : 'TradingView';\n  \n  // İlgili hisseler\n  const symbols = [];\n  const symbolLinks = document.querySelectorAll('a[href*=\"/symbols/\"]');\n  symbolLinks.forEach(function(link) {\n    const symbolText = link.querySelector('.description-cBh_FN2P');\n    if (symbolText) {\n      symbols.push(symbolText.textContent.trim());\n    }\n  });\n  \n  return {\n    title: title,\n    body: body,\n    kapLink: kapLink,\n    date: date,\n    source: source,\n    relatedSymbols: symbols.join(', ')\n  };\n});\n\nreturn [{\n  json: {\n    url: newsUrl,\n    title: content.title,\n    body: content.body,\n    kapLink: content.kapLink,\n    date: content.date,\n    source: content.source,\n    relatedSymbols: content.relatedSymbols\n  }\n}];",
+        "options": {}
+      },
+      "type": "CUSTOM.puppeteer",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        672
+      ],
+      "id": "4692ced9-4278-441f-8288-719500e89ece",
+      "name": "content scraper"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1feICjGMGyUlyvEbQvW9O6EGxg2jXWAmsWvu-fzDoYkE",
+          "mode": "list",
+          "cachedResultName": "Scraped News",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1feICjGMGyUlyvEbQvW9O6EGxg2jXWAmsWvu-fzDoYkE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1feICjGMGyUlyvEbQvW9O6EGxg2jXWAmsWvu-fzDoYkE/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "TradingView_Symbol",
+              "lookupValue": "={{ $json.stockSymbol }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -128,
+        112
+      ],
+      "id": "2d767533-7c6e-42b4-a423-15cdc015b5bd",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "kxp32ajLdXfPub88",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1456,
+        832
+      ],
+      "id": "408f971d-a83c-4913-9505-6b312c2848be",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "7sd0QJTdc4v8cjlQ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('content scraper').item.json.url }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1552,
+        848
+      ],
+      "id": "75d854da-ba26-499a-92f7-234588a2c2ce",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process ALL items, not just the first one\nconst items = $input.all();\nconst results = [];\n\n// Get all article data from content scraper\nconst articleItems = $('content scraper').all();\n\n// CONFIG\nconst SKIP_UNKNOWN_SYMBOLS = true;\n\n// Utils\nfunction isTicker(k) {\n  // BIST hisse kodları ve endeksler (nokta destekli) için basit doğrulama\n  return /^[A-Z0-9\\.]{2,12}$/.test(k);\n}\n\nfunction parseRelatedSymbols(val) {\n  if (!val) return [];\n  if (Array.isArray(val)) return val.map(s => String(s).trim()).filter(Boolean);\n  // örn: \"AEFES, BVSAN, DOHOL, GARAN\" → [\"AEFES\",\"BVSAN\",\"DOHOL\",\"GARAN\"]\n  return String(val)\n    .split(/[,\\s]+/)\n    .map(s => s.trim())\n    .filter(s => isTicker(s));\n}\n\nfunction normalizeEntries(parsedData, articleData) {\n  const rows = [];\n  const related = parseRelatedSymbols(articleData.relatedSymbols);\n\n  const pushRow = (obj, parentSymbol, parentName) => {\n    const sym =\n      obj['STOCK SYMBOL'] ||\n      obj['STOCK_SYMBOL'] ||\n      parentSymbol ||\n      Object.keys(obj).find(k => isTicker(k) && typeof obj[k] !== 'undefined');\n\n    let name =\n      obj['STOCK NAME'] ||\n      obj['STOCK_NAME'] ||\n      parentName ||\n      (sym && typeof obj[sym] === 'string' ? obj[sym] : null);\n\n    // Fallback: AI sembol vermediyse ve makalede tek sembol varsa onu kullan\n    let symbol = sym;\n    if (!symbol && related.length === 1) {\n      symbol = related[0];\n    }\n\n    // Sembol hâlâ yoksa (ve birden fazla related var) kaydı atla (liste yazma!)\n    if (!symbol) {\n      if (SKIP_UNKNOWN_SYMBOLS) return;\n      // İstenirse Unknown olarak da yazılabilir:\n      // symbol = 'UNKNOWN';\n    }\n\n    if (!name && symbol) name = symbol;\n\n    const sentiment = obj.sentiment || obj.SENTIMENT || null;\n    const sentiment_score = obj.sentiment_score ?? obj.SENTIMENT_SCORE ?? null;\n    const confidence = obj.confidence ?? obj.CONFIDENCE ?? null;\n    const reasoning = obj.reasoning ?? obj.REASONING ?? '';\n\n    rows.push({\n      symbol,\n      name,\n      sentiment,\n      sentiment_score,\n      confidence,\n      reasoning\n    });\n  };\n\n  if (Array.isArray(parsedData)) {\n    // Ör: [{ AEFES: \"Anadolu Efes\", sentiment: \"neutral\", ... }, {...}]\n    for (const obj of parsedData) {\n      const tickerKeys = Object.keys(obj).filter(isTicker);\n      if (tickerKeys.length === 1) {\n        const sym = tickerKeys[0];\n        const nm = typeof obj[sym] === 'string' ? obj[sym] : (obj['STOCK NAME'] || obj['STOCK_NAME']);\n        pushRow(obj, sym, nm);\n      } else {\n        pushRow(obj);\n      }\n    }\n  } else if (parsedData && typeof parsedData === 'object') {\n    // Ör: { VAKBN: {...}, HALKB: {...} } (iç içe sözlük)\n    const tickerObjectKeys = Object.keys(parsedData).filter(k => isTicker(k) && typeof parsedData[k] === 'object' && !Array.isArray(parsedData[k]));\n    if (tickerObjectKeys.length > 0 && !parsedData.sentiment) {\n      for (const sym of tickerObjectKeys) {\n        const sub = parsedData[sym] || {};\n        pushRow(sub, sym, sub['STOCK NAME'] || sub['STOCK_NAME']);\n      }\n    } else {\n      // Ör: { THYAO: \"Turkish Airlines\", sentiment: \"positive\", ... } (tek nesne)\n      const singleTickerKeys = Object.keys(parsedData).filter(k => isTicker(k) && typeof parsedData[k] === 'string');\n      const sym = singleTickerKeys[0] || null;\n      const nm = sym ? (typeof parsedData[sym] === 'string' ? parsedData[sym] : parsedData['STOCK NAME'] || parsedData['STOCK_NAME']) : (parsedData['STOCK NAME'] || parsedData['STOCK_NAME']);\n      pushRow(parsedData, sym, nm);\n    }\n  }\n\n  return rows;\n}\n\n// Tekilleştirme için harita: URL|SYMBOL\nconst uniqueMap = new Map();\n\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i];\n  const aiOutput = item.json.output;\n\n  // Parse the JSON string from AI\n  let parsedData;\n  try {\n    parsedData = JSON.parse(aiOutput);\n  } catch (error) {\n    console.error('Failed to parse AI response:', error);\n    continue; // parse edilemeyenleri atla (istersen burada \"error\" satırı da yazabilirsin)\n  }\n\n  // Get the corresponding article data from content scraper\n  const articleData = articleItems[i].json;\n\n  // Normalize to per-stock entries\n  const rows = normalizeEntries(parsedData, articleData);\n\n  for (const row of rows) {\n    // Tekilleştirme anahtarı\n    const key = `${articleData.url}|${row.symbol}`;\n\n    // Eğer aynı haber+sembol için birden çok satır gelirse, en yüksek güveni seç\n    const prev = uniqueMap.get(key);\n    if (!prev || (row.confidence ?? 0) > (prev.json.CONFIDENCE ?? 0)) {\n      const rec = {\n        json: {\n          ARTICLE_URL: articleData.url,\n          ARTICLE_TITLE: articleData.title,\n          ARTICLE_SNIPPET: articleData.body?.substring(0, 2000) ?? '',\n          STOCK_NAME: row.name,\n          SOURCE: \"Tradingview\",\n          PUBLISH_DATE: articleData.date,\n          SCRAPED_DATE: new Date().toISOString().replace('T', ' ').split('.')[0],\n          SENTIMENT: row.sentiment,\n          SENTIMENT_SCORE: row.sentiment_score,\n          CONFIDENCE: row.confidence,\n          REASONING: row.reasoning,\n          TradingView_Symbol: row.symbol,\n          STOCK_SYMBOL: row.symbol\n        }\n      };\n      uniqueMap.set(key, rec);\n    }\n  }\n}\n\n// Map → results[]\nfor (const v of uniqueMap.values()) {\n  results.push(v);\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2352,
+        672
+      ],
+      "id": "14235951-356e-42dc-885e-0ae6e18bb97b",
+      "name": "PARSE AI OUTPUT"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1feICjGMGyUlyvEbQvW9O6EGxg2jXWAmsWvu-fzDoYkE",
+          "mode": "list",
+          "cachedResultName": "Scraped News",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1feICjGMGyUlyvEbQvW9O6EGxg2jXWAmsWvu-fzDoYkE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1feICjGMGyUlyvEbQvW9O6EGxg2jXWAmsWvu-fzDoYkE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "PUBLISH_DATE": "={{ $json.PUBLISH_DATE }}",
+            "SCRAPED_DATE": "={{ $json.SCRAPED_DATE }}",
+            "TradingView_Symbol": "={{ $json.TradingView_Symbol }}",
+            "SENTIMENT": "={{ $json.SENTIMENT }}",
+            "SENTIMENT_SCORE": "={{ $json.SENTIMENT_SCORE }}",
+            "STOCK_SYMBOL": "={{ $json.STOCK_SYMBOL }}",
+            "ARTICLE_SNIPPET": "={{ $json.ARTICLE_SNIPPET }}",
+            "ARTICLE_TITLE": "={{ $json.ARTICLE_TITLE }}",
+            "SOURCE": "={{ $json.SOURCE }}",
+            "ARTICLE_URL": "={{ $json.ARTICLE_URL }}",
+            "STOCK_NAME": "={{ $json.STOCK_NAME }}",
+            "CONFIDENCE": "={{ $json.CONFIDENCE }}"
+          },
+          "matchingColumns": [
+            "ARTICLE_URL"
+          ],
+          "schema": [
+            {
+              "id": "STOCK_SYMBOL",
+              "displayName": "STOCK_SYMBOL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "TradingView_Symbol",
+              "displayName": "TradingView_Symbol",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "STOCK_NAME",
+              "displayName": "STOCK_NAME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ARTICLE_TITLE",
+              "displayName": "ARTICLE_TITLE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ARTICLE_SNIPPET",
+              "displayName": "ARTICLE_SNIPPET",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ARTICLE_URL",
+              "displayName": "ARTICLE_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SOURCE",
+              "displayName": "SOURCE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PUBLISH_DATE",
+              "displayName": "PUBLISH_DATE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SCRAPED_DATE",
+              "displayName": "SCRAPED_DATE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SENTIMENT",
+              "displayName": "SENTIMENT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SENTIMENT_SCORE",
+              "displayName": "SENTIMENT_SCORE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CONFIDENCE",
+              "displayName": "CONFIDENCE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2800,
+        672
+      ],
+      "id": "c6bc23ec-ce8e-4fc5-a03a-5a6f740f750e",
+      "name": "NEWS DATABASE",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "kxp32ajLdXfPub88",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1plpigtx48qGxLblBzmqt1_2LT6tU9xk3TOm_nOFkL8k",
+          "mode": "list",
+          "cachedResultName": "N8N-SENTİMENT-OVERALL",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1plpigtx48qGxLblBzmqt1_2LT6tU9xk3TOm_nOFkL8k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1plpigtx48qGxLblBzmqt1_2LT6tU9xk3TOm_nOFkL8k/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "STOCK_SYMBOL"
+          ],
+          "schema": [
+            {
+              "id": "STOCK_SYMBOL",
+              "displayName": "STOCK_SYMBOL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "STOCK_NAME",
+              "displayName": "STOCK_NAME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TOTAL_NEWS",
+              "displayName": "TOTAL_NEWS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "LAST_UPDATE",
+              "displayName": "LAST_UPDATE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AVG_SENTIMENT_SCORE",
+              "displayName": "AVG_SENTIMENT_SCORE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "OVERALL_SENTIMENT",
+              "displayName": "OVERALL_SENTIMENT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "POSITIVE_COUNT",
+              "displayName": "POSITIVE_COUNT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "POSITIVE_PERCENT",
+              "displayName": "POSITIVE_PERCENT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NEUTRAL_COUNT",
+              "displayName": "NEUTRAL_COUNT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NEUTRAL_PERCENT",
+              "displayName": "NEUTRAL_PERCENT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NEGATIVE_COUNT",
+              "displayName": "NEGATIVE_COUNT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NEGATIVE_PERCENT",
+              "displayName": "NEGATIVE_PERCENT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "LATEST_3_NEWS",
+              "displayName": "LATEST_3_NEWS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -96,
+        1328
+      ],
+      "id": "552b7de7-c388-479a-8eb8-6b726ef00ecc",
+      "name": "SENTIMENT FOR EARCH STOCK DB",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "kxp32ajLdXfPub88",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const batch = $input.all().map(x => x.json);\nconst sheetRows = $('Get row(s) in sheet').all().map(x => x.json);\nconst symbols = [...new Set(batch.map(n => n.STOCK_SYMBOL).filter(Boolean))];\n\nconst toDate = s => s ? new Date(String(s).replace(' ', 'T')) : new Date(0);\n\nconst results = [];\n\nfor (const sym of symbols) {\n  const batchForSym = batch.filter(n => n.STOCK_SYMBOL === sym);\n  const sheetForSym = sheetRows.filter(n => n.STOCK_SYMBOL === sym);\n\n  const combined = [...sheetForSym, ...batchForSym];\n  const allNews = Array.from(new Map(combined.map(n => [n.ARTICLE_URL, n])).values());\n\n  const totalNews = allNews.length;\n  const sentimentCounts = {\n    positive: allNews.filter(n => n.SENTIMENT?.toLowerCase() === 'positive').length,\n    neutral: allNews.filter(n => n.SENTIMENT?.toLowerCase() === 'neutral').length,\n    negative: allNews.filter(n => n.SENTIMENT?.toLowerCase() === 'negative').length\n  };\n  const avgSentimentScore = totalNews ? (allNews.reduce((s, n) => s + (n.SENTIMENT_SCORE || 0), 0) / totalNews) : 0;\n\n  let overallSentiment = 'NEUTRAL';\n  if (sentimentCounts.positive > sentimentCounts.negative && avgSentimentScore > 0.55) overallSentiment = 'POSITIVE';\n  else if (sentimentCounts.negative > sentimentCounts.positive && avgSentimentScore < 0.45) overallSentiment = 'NEGATIVE';\n\n  const latest3News = allNews\n    .slice()\n    .sort((a, b) => toDate(b.PUBLISH_DATE) - toDate(a.PUBLISH_DATE))\n    .slice(0, 3)\n    .map(n => ({\n      title: n.ARTICLE_TITLE,\n      sentiment: n.SENTIMENT,\n      score: n.SENTIMENT_SCORE,\n      url: n.ARTICLE_URL,\n      date: n.PUBLISH_DATE\n    }));\n\n  results.push({\n    json: {\n      STOCK_SYMBOL: sym,\n      STOCK_NAME: batchForSym[0]?.STOCK_NAME || sheetForSym[0]?.STOCK_NAME || sym,\n      TOTAL_NEWS: totalNews,\n      LAST_UPDATE: new Date().toISOString().split('T')[0],\n      AVG_SENTIMENT_SCORE: avgSentimentScore.toFixed(2),\n      OVERALL_SENTIMENT: overallSentiment,\n      POSITIVE_COUNT: sentimentCounts.positive,\n      POSITIVE_PERCENT: totalNews ? Math.round((sentimentCounts.positive / totalNews) * 100) : 0,\n      NEUTRAL_COUNT: sentimentCounts.neutral,\n      NEUTRAL_PERCENT: totalNews ? Math.round((sentimentCounts.neutral / totalNews) * 100) : 0,\n      NEGATIVE_COUNT: sentimentCounts.negative,\n      NEGATIVE_PERCENT: totalNews ? Math.round((sentimentCounts.negative / totalNews) * 100) : 0,\n      LATEST_3_NEWS: JSON.stringify(latest3News)\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        1328
+      ],
+      "id": "ce17a1e9-869e-4fcf-ac89-17c11ad0e2fa",
+      "name": "GET ready for sheet"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=`Analyze this article about {{ $json.relatedSymbols }}:\n\nTitle: {{ $json.title }}\nContent: {{ $json.body }}\n\nReturn sentiment analysis as JSON.` ",
+        "options": {
+          "systemMessage": "You are a financial sentiment analysis expert. Analyze Turkish news articles about stocks and return ONLY a JSON response. You are focusing the article just about the related symbol. \n\nOutput format:\n{\n   \"STOCK NAME\": \"Write full name of stock\"\n  \"sentiment\": \"positive\" | \"neutral\" | \"negative\",\n  \"sentiment_score\": 0.0 to 1.0 (0=very negative, 0.5=neutral, 1=very positive),\n  \"confidence\": 0.0 to 1.0,\n  \"reasoning\": \"Brief explanation in English\"\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        1456,
+        672
+      ],
+      "id": "419a7935-4e57-4bc4-b1a4-70a2d410ffef",
+      "name": "Sentiment Analyzer"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2352,
+        928
+      ],
+      "id": "f05c0e16-d67e-4873-a9a4-3861a37461e2",
+      "name": "Wait",
+      "webhookId": "ee857ffc-e748-4970-a470-5f52dcdd6ad3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tüm input verilerini al\nconst inputData = $input.all();\n\n// Eğer input tamamen boşsa (hiç hisse yoksa), direkt scraping gereksin\nif (inputData.length === 0) {\n  return [{\n    json: {\n      needsScraping: true,\n      reason: 'no_input',\n      stockSymbol: null\n    }\n  }];\n}\n\n// LAST_UPDATE yoksa SCRAPED_DATE'i kullanarak en son tarihli veriyi bul\nconst withDates = inputData\n  .map(item => {\n    const data = item.json;\n    const dateStr = data.LAST_UPDATE || data.SCRAPED_DATE;\n    return {\n      ...data,\n      __parsedDate: dateStr ? new Date(dateStr) : null\n    };\n  })\n  .filter(item => item.__parsedDate && !isNaN(item.__parsedDate));\n\n// Eğer geçerli tarihli veri yoksa, scraping gerektiğini döndür\nif (withDates.length === 0) {\n  // Gelen ilk inputtan sembolü al\n  const symbol =\n    inputData[0].json.stockSymbol ||\n    inputData[0].json.STOCK_SYMBOL ||\n    null;\n\n  return [{\n    json: {\n      needsScraping: true,\n      reason: 'no_valid_dates',\n      stockSymbol: symbol\n    }\n  }];\n}\n\n// En yeni tarihi bul\nconst latestData = withDates.reduce((latest, current) =>\n  current.__parsedDate > latest.__parsedDate ? current : latest\n);\n\n// Şimdi en yeni veriye göre scraping gerekip gerekmediğini kontrol et\nconst now = new Date();\nconst diffInHours = (now - latestData.__parsedDate) / (1000 * 60 * 60);\nconst needsScraping = diffInHours >= 12;\n\nreturn [{\n  json: {\n    needsScraping,\n    reason: needsScraping ? 'old_data' : 'up_to_date',\n    stockSymbol:\n      latestData.STOCK_SYMBOL ||\n      latestData.stockSymbol ||\n      null,\n    lastUpdate: latestData.LAST_UPDATE || latestData.SCRAPED_DATE,\n    hoursSinceUpdate: diffInHours.toFixed(2),\n    existingData: latestData\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        112
+      ],
+      "id": "73b28e15-d3c6-45b8-b092-d977ffba0941",
+      "name": "CHECK FRESHNESS"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "318202e5-2cb0-4c58-a2af-c5e65f67175d",
+              "leftValue": "={{ $json.needsScraping }}",
+              "rightValue": "={{ true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        752,
+        112
+      ],
+      "id": "4eee6784-ccd3-4791-b96b-86b85d6dd2fc",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1feICjGMGyUlyvEbQvW9O6EGxg2jXWAmsWvu-fzDoYkE",
+          "mode": "list",
+          "cachedResultName": "Scraped News",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1feICjGMGyUlyvEbQvW9O6EGxg2jXWAmsWvu-fzDoYkE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1feICjGMGyUlyvEbQvW9O6EGxg2jXWAmsWvu-fzDoYkE/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "TradingView_Symbol",
+              "lookupValue": "={{ $('Stock Name Cleaner').first().json.stockSymbol }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1200,
+        -48
+      ],
+      "id": "9a673c72-1a5c-43dd-b4eb-160ba9d00a14",
+      "name": "urlleri getir",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "kxp32ajLdXfPub88",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# GÜNCEL HABER GETİRME\n",
+        "height": 544,
+        "width": 2896
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -704,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "036256ae-1499-4185-9b87-a6d1e43e9164",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# GÜNCEL HABERLERİ  ANALİZİ VE DB KAYDI\n\n",
+        "height": 672,
+        "width": 3136,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        240,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "64b9195e-8384-4b5f-94ec-24ff279a5df7",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# OVERALL SCORE  RESPONSE",
+        "height": 576,
+        "width": 1728
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -768,
+        1168
+      ],
+      "typeVersion": 1,
+      "id": "7ab9ea5c-6d2c-44b8-a0cb-9901916e3d45",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sentiment_analysis",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -688,
+        112
+      ],
+      "id": "1e569426-9c77-4dd5-8d79-94677ece760c",
+      "name": "Webhook",
+      "webhookId": "07062b02-391c-4d0a-b138-dc67bfc79201"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        512,
+        1408
+      ],
+      "id": "e32a62ac-433f-4621-987d-1c12054587b2",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3136,
+        672
+      ],
+      "id": "b639c203-5ad6-4c43-87a4-08721bd83ace",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "jsCode": "const stockId = $json[\"body\"][\"stockId\"];\nconst stockSymbol = stockId.replace('.IS', '');\n\nreturn [{\n  json: {\n    stockSymbol\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        112
+      ],
+      "id": "2c6dbf6c-7513-478f-8df4-f7701b1f1d35",
+      "name": "Stock Name Cleaner"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sheetItems = $items(\"Get row(s) in sheet\");\nconst cleanedItems = $items(\"Stock Name Cleaner\");\n\n// Sheet verisi tamamen boş mu kontrol et\nconst hasValidSheetData = sheetItems.length > 0 && Object.keys(sheetItems[0].json || {}).length > 0;\n\nif (!hasValidSheetData) {\n  // Sheet boşsa clean veriyi döndür\n  return cleanedItems;\n} else {\n  // Sheet doluysa sheet verisini döndür\n  return sheetItems;\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        112
+      ],
+      "id": "8dc71466-2b34-4e46-9a28-2e8c959247bd",
+      "name": "NEW STOCK OR OLD"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1plpigtx48qGxLblBzmqt1_2LT6tU9xk3TOm_nOFkL8k",
+          "mode": "list",
+          "cachedResultName": "N8N-SENTİMENT-OVERALL",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1plpigtx48qGxLblBzmqt1_2LT6tU9xk3TOm_nOFkL8k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1plpigtx48qGxLblBzmqt1_2LT6tU9xk3TOm_nOFkL8k/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "STOCK_SYMBOL",
+              "lookupValue": "={{ $json.stockSymbol }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -112,
+        1552
+      ],
+      "id": "c485e909-a291-474f-a29b-1c25de5fa5d7",
+      "name": "IF THERE NIS NOTHING NEW JUST TAKE ROW",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "kxp32ajLdXfPub88",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Google Sheets'ten gelen data\nconst sheetsData = $input.all();\n\nconsole.log('Received data:', JSON.stringify(sheetsData, null, 2));\n\n// Eğer veri yoksa\nif (!sheetsData || sheetsData.length === 0) {\n  return [];\n}\n\n// URL'leri topla ve boş olmayanları filtrele\nconst urls = sheetsData\n  .map(item => item.json.ARTICLE_URL)\n  .filter(url => url && url.trim() !== \"\");\n\n// Her URL için ayrı bir json objesi döndür\nreturn urls.map(url => ({\n  json: { url: url }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        -48
+      ],
+      "id": "54bc51bf-344b-4aa4-906b-5ddbad35a2dc",
+      "name": "Code in JavaScript",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "url",
+        "joinMode": "keepNonMatches",
+        "outputDataFrom": "input2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1696,
+        96
+      ],
+      "id": "d5cdab5e-2cf8-45b9-9e2c-63872dd174f5",
+      "name": "Merge",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e1286b5e-d1a7-4107-bfd2-ec4ed8e74c17",
+              "leftValue": "={{ $json.url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        96
+      ],
+      "id": "d026653d-dded-43b3-8670-b9e2a258a0ce",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// INPUT boş mu kontrol et\nif (!items || items.length === 0 || Object.keys(items[0].json).length === 0) {\n    // Stock Name Cleaner node'unun output'unu döndür\n    return $items(\"Stock Name Cleaner\");\n}\n\n// INPUT doluysa mevcut işlemlerini yap\nconst data = items[0].json;\n\n// Burada kendi işlem adımlarını uygulayabilirsin\n// Örnek:\nreturn [\n  {\n    json: {\n      success: true,\n      data\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        304
+      ],
+      "id": "180c00ce-ec03-4871-96df-73060933d817",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Url scraper": {
+      "main": [
+        [
+          {
+            "node": "urlleri getir",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "content scraper": {
+      "main": [
+        [
+          {
+            "node": "Sentiment Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "NEW STOCK OR OLD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Sentiment Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Sentiment Analyzer",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PARSE AI OUTPUT": {
+      "main": [
+        [
+          {
+            "node": "NEWS DATABASE",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NEWS DATABASE": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET ready for sheet": {
+      "main": [
+        [
+          {
+            "node": "SENTIMENT FOR EARCH STOCK DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sentiment Analyzer": {
+      "main": [
+        [
+          {
+            "node": "PARSE AI OUTPUT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "GET ready for sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CHECK FRESHNESS": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Url scraper",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF THERE NIS NOTHING NEW JUST TAKE ROW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "urlleri getir": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Stock Name Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SENTIMENT FOR EARCH STOCK DB": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stock Name Cleaner": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NEW STOCK OR OLD": {
+      "main": [
+        [
+          {
+            "node": "CHECK FRESHNESS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF THERE NIS NOTHING NEW JUST TAKE ROW": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "content scraper",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "IF THERE NIS NOTHING NEW JUST TAKE ROW",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "495676bf-d0f9-4723-badb-daa74177b55c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "47d906f34b05ff7dd1fb5760e7f5b24b3db89594671a7308557736ad4fca0451"
+  },
+  "id": "QpMcnN62gPZoYh7K",
+  "tags": []
+}

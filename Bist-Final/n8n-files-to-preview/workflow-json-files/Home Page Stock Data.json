@@ -1,0 +1,421 @@
+{
+  "name": "Home Page Stock Data",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "stock-data",
+        "responseMode": "responseNode",
+        "options": {
+          "ignoreBots": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -304,
+        976
+      ],
+      "id": "5fe78701-b0b1-4822-8b53-4632c46f1121",
+      "name": "Webhook",
+      "webhookId": "stock-data-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.stockId}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        976
+      ],
+      "id": "52cc3b9d-2f65-46a2-bf64-5ede1e27ae56",
+      "name": "Validate Input"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"error\": \"Stock ID is required\"}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        48,
+        1136
+      ],
+      "id": "079c972f-afbf-4bf7-a039-3a0f2c97126c",
+      "name": "Error Response"
+    },
+    {
+      "parameters": {
+        "url": "=https://query1.finance.yahoo.com/v8/finance/chart/{{$json.body.stockId}}?interval={{$json.body.interval || '1d'}}&range={{$json.body.range || '1mo'}}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        64,
+        880
+      ],
+      "id": "ce2d6edc-fe88-4694-a623-ab0ea59c0364",
+      "name": "Fetch Yahoo Finance"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Yahoo Finance response\nconst input = items[0].json;\n\n// Check if data exists\nif (!input.chart || !input.chart.result || input.chart.result.length === 0) {\n  return [{\n    json: {\n      error: 'No data found for this stock symbol'\n    }\n  }];\n}\n\nconst chart = input.chart.result[0];\nconst meta = chart.meta;\nconst timestamps = chart.timestamp;\nconst quote = chart.indicators.quote[0];\nconst adjclose = chart.indicators.adjclose[0].adjclose;\n\n// Convert timestamp to date\nfunction toDate(ts) {\n  return new Date(ts * 1000).toISOString().split('T')[0];\n}\n\n// Build historical data array\nconst historicalData = timestamps.map((ts, i) => ({\n  date: toDate(ts),\n  timestamp: ts,\n  open: quote.open[i],\n  high: quote.high[i],\n  low: quote.low[i],\n  close: quote.close[i],\n  adjClose: adjclose[i],\n  volume: quote.volume[i]\n}));\n\n// Calculate basic statistics\nconst closePrices = quote.close.filter(p => p !== null);\nconst avgPrice = closePrices.reduce((a, b) => a + b, 0) / closePrices.length;\nconst minPrice = Math.min(...closePrices);\nconst maxPrice = Math.max(...closePrices);\nconst priceChange = closePrices[closePrices.length - 1] - closePrices[0];\nconst priceChangePercent = (priceChange / closePrices[0]) * 100;\n\n// Return structured response\nreturn [{\n  json: {\n    success: true,\n    meta: {\n      symbol: meta.symbol,\n      currency: meta.currency,\n      exchangeName: meta.exchangeName,\n      longName: meta.longName,\n      currentPrice: meta.regularMarketPrice,\n      previousClose: meta.chartPreviousClose,\n      dayHigh: meta.regularMarketDayHigh,\n      dayLow: meta.regularMarketDayLow,\n      volume: meta.regularMarketVolume,\n      fiftyTwoWeekHigh: meta.fiftyTwoWeekHigh,\n      fiftyTwoWeekLow: meta.fiftyTwoWeekLow\n    },\n    statistics: {\n      averagePrice: avgPrice.toFixed(2),\n      minPrice: minPrice.toFixed(2),\n      maxPrice: maxPrice.toFixed(2),\n      priceChange: priceChange.toFixed(2),\n      priceChangePercent: priceChangePercent.toFixed(2)\n    },\n    historicalData: historicalData,\n    dataPoints: historicalData.length,\n    fetchedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        880
+      ],
+      "id": "e62cb359-c226-42ef-bda8-ef2335887ab2",
+      "name": "Process Data"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, GET, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1424,
+        880
+      ],
+      "id": "02ee11f9-ae80-4ef4-ae3d-ee24415773d0",
+      "name": "Success Response"
+    },
+    {
+      "parameters": {
+        "content": "## TAKING BIST STOCK DATA FROM YAHOO FINANCE \n",
+        "height": 496,
+        "width": 1408
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -320,
+        784
+      ],
+      "typeVersion": 1,
+      "id": "c893f567-4b27-4cf1-b03c-90383f39b30f",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=User Message (Prompt):\n\nAnalyze the following stock:\n\nCompany: {{$json.meta.longName}}\nSymbol: {{$json.meta.symbol}}\nCurrent Price: {{$json.meta.currentPrice}} {{$json.meta.currency}}\nPrevious Close: {{$json.meta.previousClose}}\nVolume: {{$json.meta.volume}}\n\n\nRespond strictly in the following JSON structure:\n{\n  \"summary\": \"1–2 sentence overview of the company\",\n  \"details\": {\n    \"sector\": \"Sector\",\n    \"volume\": \"Volume status (High / Medium / Low)\",\n    \"profitability\": \"Profitability status\"\n  },\n  \"recommendation\": \"BUY RECOMMENDED or SELL RECOMMENDED or HOLD\",\n  \"reasoning\": \"Brief explanation for the recommendation\"\n}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "System Prompt (Role):\n\nYou are a expert financial analyst assistant. You analyze stocks and respond only in JSON format. Specially you have much experience on Borsa Istanbul\n",
+          "returnIntermediateSteps": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        464,
+        176
+      ],
+      "id": "16e48047-b46b-44e6-a5fc-dd4bc7d87ec8",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1008,
+        496
+      ],
+      "id": "220a04ab-1a51-4c4b-b0f4-e84d141b5633",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        384,
+        480
+      ],
+      "id": "bd20f15b-f588-44ad-9abc-fbb28d319f66",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "7sd0QJTdc4v8cjlQ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "stock_analysis"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        528,
+        480
+      ],
+      "id": "a804175f-9470-43a2-908b-01db0bc80c2a",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiData = $input.first().json;      // aı parse'dan gelen\nconst stockData = $input.last().json;    // Process Data'dan gelen tam veri\n\nreturn {\n  json: {\n    success: true,\n    stock: {\n      meta: stockData.meta,\n      statistics: stockData.statistics,\n      historicalData: stockData.historicalData,\n      dataPoints: stockData.dataPoints,\n      fetchedAt: stockData.fetchedAt\n    },\n    aiAnalysis: aiData.aiAnalysis,\n    analyzedAt: new Date().toISOString()\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        496
+      ],
+      "id": "36878796-48af-422d-a38d-68609101db41",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9e9cab66-23f6-45a2-85dd-6b1489934b6a",
+              "name": "meta",
+              "value": "={{ $json.meta }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        256,
+        176
+      ],
+      "id": "9d6a3a03-b613-487e-a764-5b36016d102e",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "content": "## BASİC AI ANALYSIS FOR SIMPLE TRADE IDEA",
+        "height": 752,
+        "width": 1552,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -208,
+        32
+      ],
+      "typeVersion": 1,
+      "id": "5ade85ba-04e0-462a-85c6-ba489969f4c9",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get AI Agent output\nconst aiOutput = items[0].json.output;\n\n// Parse the JSON string\nlet aiAnalysis;\ntry {\n  aiAnalysis = JSON.parse(aiOutput);\n} catch (e) {\n  // Fallback if parsing fails\n  aiAnalysis = {\n    summary: \"AI analysis failed\",\n    details: {\n\n      sector: \"Unknown\",\n      volume: \"Unknown\",\n      profitability: \"Unknown\"\n    },\n    recommendation: \"HOLD\",\n    reasoning: \"Error occurred during analysis\"\n  };\n}\n\nreturn {\n  json: {\n    aiAnalysis: aiAnalysis\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        176
+      ],
+      "id": "9c25a2ca-c354-425a-b8d7-6ea34703a281",
+      "name": "AI RESPONSE PARSE"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Fetch Yahoo Finance",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Yahoo Finance": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Data": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "AI RESPONSE PARSE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI RESPONSE PARSE": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "150719fd-af50-4073-8cd0-ec2b04488e91",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "47d906f34b05ff7dd1fb5760e7f5b24b3db89594671a7308557736ad4fca0451"
+  },
+  "id": "G8qGNc0wjzbVoeep",
+  "tags": []
+}

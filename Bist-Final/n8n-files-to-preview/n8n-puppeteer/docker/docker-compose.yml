@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8n-pupeteer:latest
+    ports:
+      - "5678:5678"
+    environment:
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "false"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      N8N_GIT_NODE_DISABLE_BARE_REPOS: "true"
+    cap_add:
+      - SYS_ADMIN

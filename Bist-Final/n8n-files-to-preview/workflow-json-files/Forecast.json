@@ -1,0 +1,680 @@
+{
+  "name": "Forecast",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "forecast",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -528,
+        96
+      ],
+      "id": "6b6f9599-75f2-4029-a7fc-8c016db226ac",
+      "name": "Webhook",
+      "webhookId": "f99cc916-ffa0-4eab-a7da-009a2507ba68"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://host.docker.internal:8000/api/forecast\n",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"stockId\": \"{{ $json.stockSymbol }}\",\n  \"days\": 14,\n  \"model\": \"auto\",\n  \"useGridSearch\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1168,
+        208
+      ],
+      "id": "a69a5f0b-164a-4e71-ab3b-b89e6716b0c8",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1520,
+        -80
+      ],
+      "id": "89abc318-c9a8-48b4-b9db-497a69dfe6e2",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "## GET ROWS FROM FORECAST SHEET \n",
+        "height": 544,
+        "width": 544
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -576,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "3d1822d8-9f28-45ba-a957-cdaccca447f5",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1q8doVjk7WakeIxzc_xvyULBDkzH50KRe4PVToD47ObY",
+          "mode": "list",
+          "cachedResultName": "FORECAST",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1q8doVjk7WakeIxzc_xvyULBDkzH50KRe4PVToD47ObY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1q8doVjk7WakeIxzc_xvyULBDkzH50KRe4PVToD47ObY/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "stockSymbol": "={{ $json.stockSymbol }}",
+            "currentPrice": "={{ $json.currentPrice }}",
+            "predictedPrice": "={{ $json.predictedPrice }}",
+            "priceChange": "={{ $json.changePercent }}",
+            "confidence": "={{ $json.confidence }}",
+            "changePercent": "={{ $json.changePercent }}",
+            "timeHorizon": "={{ $json.timeHorizon }}",
+            "model": "={{ $json.metadata.model }}",
+            "historicalDays": "={{ $json.metadata.historicalDays }}",
+            "lastUpdate": "={{ $json.metadata.lastUpdate }}",
+            "dataSource": "={{ $json.metadata.dataSource }}",
+            "trend": "={{ $json.metadata.trend }}",
+            "rawPredictionsJSON": "={{ $json.predictions }}"
+          },
+          "matchingColumns": [
+            "stockSymbol"
+          ],
+          "schema": [
+            {
+              "id": "stockSymbol",
+              "displayName": "stockSymbol",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "currentPrice",
+              "displayName": "currentPrice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "predictedPrice",
+              "displayName": "predictedPrice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priceChange",
+              "displayName": "priceChange",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "changePercent",
+              "displayName": "changePercent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timeHorizon",
+              "displayName": "timeHorizon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lastUpdate",
+              "displayName": "lastUpdate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "model",
+              "displayName": "model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "historicalDays",
+              "displayName": "historicalDays",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "dataSource",
+              "displayName": "dataSource",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "trend",
+              "displayName": "trend",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rawPredictionsJSON",
+              "displayName": "rawPredictionsJSON",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1536,
+        400
+      ],
+      "id": "2c3e926b-9e23-4640-98b3-a083655227ad",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "kxp32ajLdXfPub88",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1q8doVjk7WakeIxzc_xvyULBDkzH50KRe4PVToD47ObY",
+          "mode": "list",
+          "cachedResultName": "FORECAST",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1q8doVjk7WakeIxzc_xvyULBDkzH50KRe4PVToD47ObY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1q8doVjk7WakeIxzc_xvyULBDkzH50KRe4PVToD47ObY/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "stockSymbol",
+              "lookupValue": "={{ $json.stockSymbol }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -176,
+        96
+      ],
+      "id": "404b1c88-bd54-459c-af65-c94f434a009d",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "kxp32ajLdXfPub88",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const stockIdd = $json[\"body\"][\"stockId\"];\nconst stockSymbol = stockIdd.replace('.IS', '');\n\nreturn [{\n  json: {\n    stockSymbol\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        96
+      ],
+      "id": "bd2105e1-fefe-4a18-9e7f-956aa84e2ba0",
+      "name": "Stock Name Cleaner"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6edc5e43-69be-4aeb-954c-14cb4c9e5bb3",
+              "leftValue": "={{ $json.metadata.lastUpdate }}",
+              "rightValue": "E",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        96
+      ],
+      "id": "ea219def-83b0-4dd6-a903-b1c799531ea9",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6864802f-14d4-4eb8-b11f-4d08c45080a2",
+              "leftValue": "={{ $json.metadata.lastUpdate }}",
+              "rightValue": "={{ $now.format('yyyy-MM-dd') }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        -64
+      ],
+      "id": "af256641-2f5e-411f-b062-1d38ee55ead8",
+      "name": "If1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1776,
+        400
+      ],
+      "id": "7f65ca3c-c167-4fd3-ac51-4b6247780330",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.all();\n\n// Eğer gerçekten tamamen input yoksa\nif (inputData.length === 0) {\n  return $item(0).$node[\"Stock Name Cleaner\"].json;\n}\n\n// İlk item\nconst item = inputData[0];\n\n// Eğer input şu şekildeyse [{}] yani item.json yok veya boş\nif (!item.json || Object.keys(item.json).length === 0) {\n  // Stock Name Cleaner varsa onun çıktısını gönder\n  if ($items(\"Stock Name Cleaner\").length > 0) {\n    return $items(\"Stock Name Cleaner\").map(nodeItem => ({\n      json: nodeItem.json\n    }));\n  }\n\n  // Yoksa Get row(s) in sheet’in çıktısını gönder\n  if ($items(\"Get row(s) in sheet\").length > 0) {\n    return $items(\"Get row(s) in sheet\").map(nodeItem => ({\n      json: nodeItem.json\n    }));\n  }\n\n  // İki node da yoksa fallback\n  return [\n    {\n      json: {\n        note: \"No valid input and no fallback node found.\"\n      }\n    }\n  ];\n}\n\n// Buraya gelirse input doludur → Normal işlem\nreturn [\n  {\n    json: {\n      stockSymbol: item.json.stockId || null,\n      needsScraping: false\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        320
+      ],
+      "id": "42e8b883-33ff-44d9-97bb-a3a8101f7c05",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.all();\n\n// Her item'ı dönüştür ve .IS ekle\nreturn inputData.map(item => {\n  const symbol = item.json.stockSymbol || null;\n\n  return {\n    json: {\n      stockSymbol: symbol ? `${symbol}.IS` : null\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        320
+      ],
+      "id": "a26ea350-ee3f-49de-9431-42927dbdf891",
+      "name": ".IS ADD"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.all();\n\n// Her item için stockSymbol al, sonuna .IS ekle ve geri döndür\nreturn inputData.map(item => {\n  const symbol = item.json.stockSymbol || null;\n\n  return {\n    json: {\n      stockSymbol: symbol ? `${symbol}.IS` : null\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        80
+      ],
+      "id": "38d35fe3-5894-404e-a3f8-7fce62394c43",
+      "name": ".IS ADD1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// İlk item\nconst item = items[0];\n\n// Eğer input boşsa [{}] veya json yoksa\nif (!item.json || Object.keys(item.json).length === 0) {\n    // Sadece boş bir item döndür\n    return [\n        { json: {} }\n    ];\n}\n\n// Eğer input doluysa → normal işlem\nreturn [\n    {\n        json: {\n            success: true,\n            stockSymbol: item.json.stockSymbol || null,\n            currentPrice: item.json.currentPrice || null,\n            predictedPrice: item.json.predictedPrice || null,\n            changePercent: item.json.changePercent || null,\n            confidence: item.json.confidence || null,\n            timeHorizon: item.json.timeHorizon || null,\n            \n            // predictions varsa parse et\n            predictions: item.json.rawPredictionsJSON ? JSON.parse(item.json.rawPredictionsJSON) : [],\n            \n            // metadata\n            metadata: {\n                model: item.json.model || null,\n                historicalDays: item.json.historicalDays || null,\n                dataSource: item.json.dataSource || null,\n                lastUpdate: item.json.lastUpdate || null\n            }\n        }\n    }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        96
+      ],
+      "id": "aa9eba75-ff42-474d-a836-ae61d39df447",
+      "name": "TURN IT TO BACKEND JSON STRUCTURE"
+    },
+    {
+      "parameters": {
+        "content": "## TURNING JSON TO BACKEND JSON FORMAT",
+        "height": 544,
+        "width": 352,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -32,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "5dff72d3-fb68-4a27-a58f-f88478bbf4bb",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## CHECKING FOR IS THERE ANY LAST_UPDATE DATE\n",
+        "height": 544,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        320,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "39458455-4360-4ce8-bd2d-ca4524b84504",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## IF LAST UPDATE TODAY IT WILL DIRECTLY MOVE TO RESPONSE IF NOT IT GOES TO FORECAST API",
+        "height": 336,
+        "width": 1184,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        560,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "c6caac81-a073-45e5-a495-0dde6171ba0b",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## ITHERE ARE NO LAST UPDATE SO WE WILL SENT TO FORECAST",
+        "height": 272,
+        "width": 544
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        560,
+        192
+      ],
+      "typeVersion": 1,
+      "id": "3651763f-0d37-421e-a7e8-96069f22aa54",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## CALLING BACKEND TO PERFORM FORECAST",
+        "height": 384,
+        "width": 272,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1104,
+        80
+      ],
+      "typeVersion": 1,
+      "id": "0f3a4773-f8d2-4e3e-aeb8-a1d675b33ac9",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## APPENDING RESULTS TO  GOOGLE SHEETS",
+        "height": 464,
+        "width": 752
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1376,
+        208
+      ],
+      "typeVersion": 1,
+      "id": "bc544a58-569e-4b82-afd6-e6bbe454b816",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Stock Name Cleaner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "TURN IT TO BACKEND JSON STRUCTURE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stock Name Cleaner": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": ".IS ADD1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": ".IS ADD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    ".IS ADD": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    ".IS ADD1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TURN IT TO BACKEND JSON STRUCTURE": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2e646b84-15a4-4147-b65e-e7cc65af9349",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "47d906f34b05ff7dd1fb5760e7f5b24b3db89594671a7308557736ad4fca0451"
+  },
+  "id": "SVvhAq5LBY81U5Np",
+  "tags": []
+}
