@@ -114,7 +114,7 @@ Bist-Final/
 
 ## Screenshots
 
-> Add screenshots of the Home page and Detailed Analysis page here.
+https://drive.google.com/drive/folders/1VAtRQzuJqUnclv1PmhNG0-M6KFnxG4Oa?usp=sharing ( Video) 
 
 ---
 
